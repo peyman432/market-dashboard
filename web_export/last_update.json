@@ -1,5 +1,5 @@
 {
-  "last_update": "2026-09-12T23:33:37",
+  "last_update": "2026-09-12T23:44:44",
   "copied_files": [
     "hot2/comprehensive_dashboard.png",
     "hot2/money_flow_analysis.png",
@@ -9,14 +9,14 @@
     "hot2/multi_chart_analysis.png",
     "hot2/institutional_analysis.png",
     "hot2/dashboard_summary.png",
-    "hot2/detailed_report.txt"
-  ],
-  "missing_files": [
-    "hot2/hot_money2_export.csv",
+    "hot2/detailed_report.txt",
     "hot3/trading_signals_data_current.csv",
     "hot3/top_trading_signals_current.csv",
     "hot3/trading_signals_analysis_current.png",
     "hot3/advanced_trading_analysis_current.png",
     "hot3/trading_analysis_report_current.txt"
+  ],
+  "missing_files": [
+    "hot2/hot_money2_export.csv"
   ]
 }
