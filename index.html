@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>داشبورد بازار سرمایه</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1216;
+    --panel:#171b21;
+    --line:#2a2f38;
+    --text:#e9e7e0;
+    --muted:#8b9099;
+    --gold:#cf9f3f;
+    --up:#4caf6b;
+    --down:#c75450;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:'Vazirmatn',Tahoma,sans-serif;}
+  body{font-size:15px;line-height:1.7;}
+  header{display:flex;align-items:center;justify-content:space-between;
+    padding:18px 28px;border-bottom:1px solid var(--line);}
+  header h1{font-size:19px;font-weight:600;margin:0;}
+  header .updated{font-size:12px;color:var(--muted);font-family:monospace,'Vazirmatn';direction:ltr;text-align:right;}
+  .layout{display:flex;min-height:calc(100vh - 64px);}
+  aside{width:230px;flex-shrink:0;padding:20px;border-left:1px solid var(--line);}
+  aside h2{font-size:12px;color:var(--muted);font-weight:500;margin:0 0 14px;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;}
+  .chip{font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:3px;
+    cursor:pointer;color:var(--muted);user-select:none;}
+  .chip.active{border-color:var(--gold);color:var(--gold);}
+  select{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);
+    padding:8px;border-radius:3px;font-family:inherit;font-size:13px;}
+  main{flex:1;padding:24px 28px;min-width:0;}
+  nav.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:22px;}
+  nav.tabs button{background:none;border:none;color:var(--muted);font-family:inherit;
+    font-size:14px;padding:0 0 12px;cursor:pointer;border-bottom:2px solid transparent;}
+  nav.tabs button.active{color:var(--text);border-color:var(--gold);}
+  section.panel{display:none;}
+  section.panel.active{display:block;}
+  h3{font-size:14px;font-weight:500;color:var(--muted);margin:26px 0 12px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);}
+  th{color:var(--muted);font-weight:500;font-size:12px;}
+  td.num{font-family:monospace,'Vazirmatn';direction:ltr;text-align:left;}
+  .up{color:var(--up);} .down{color:var(--down);}
+  .empty{padding:16px;border:1px solid var(--line);border-radius:3px;color:var(--muted);
+    font-size:13px;background:var(--panel);}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+  .gallery figure{margin:0;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--panel);}
+  .gallery img{width:100%;display:block;}
+  .gallery figcaption{padding:8px 10px;font-size:12px;color:var(--muted);}
+  .chart{border:1px solid var(--line);border-radius:3px;padding:8px;margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>داشبورد بازار سرمایه</h1>
+  <span class="updated" id="lastUpdate">در حال بارگذاری…</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <h2>فیلتر نماد</h2>
+    <div class="chip-row" id="symbolChips"></div>
+    <h2>شاخص برای نمودار</h2>
+    <select id="metricSelect"></select>
+  </aside>
+
+  <main>
+    <nav class="tabs">
+      <button class="active" data-tab="signals">📈 سیگنال‌های معاملاتی</button>
+      <button data-tab="hot2">💰 جریان پول هوشمند</button>
+      <button data-tab="gallery">🖼️ گالری نمودارها</button>
+    </nav>
+
+    <section class="panel active" id="tab-signals">
+      <div id="signalsEmpty" class="empty" style="display:none;">داده‌ی سیگنال‌های معاملاتی هنوز همگام‌سازی نشده است.</div>
+      <div id="signalsContent" style="display:none;">
+        <div id="signalsChart" class="chart"></div>
+        <h3>جدول سیگنال‌های معاملاتی</h3>
+        <div id="signalsTable"></div>
+        <h3>برترین سهام از نظر سیگنال</h3>
+        <div id="topStocksTable"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-hot2">
+      <div id="hot2Empty" class="empty" style="display:none;">
+        داده‌ی جریان پول هوشمند هنوز همگام‌سازی نشده است.
+      </div>
+      <div id="hot2Content" style="display:none;">
+        <div id="hot2Chart" class="chart"></div>
+        <h3>جدول کامل داده‌های جریان پول</h3>
+        <div id="hot2Table"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-gallery">
+      <div id="galleryEmpty" class="empty" style="display:none;">هنوز تصویری همگام‌سازی نشده است.</div>
+      <div class="gallery" id="galleryGrid"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+const state = { signals: null, topStocks: null, hot2: null, symbolCol: null, selectedSymbols: new Set() };
+
+// ---------- helpers ----------
+function fetchCSV(path){
+  return fetch(path).then(r => { if(!r.ok) throw new Error('missing'); return r.text(); })
+    .then(text => new Promise(res => Papa.parse(text, {header:true, dynamicTyping:true, skipEmptyLines:true,
+      complete: r2 => res(r2.data)})))
+    .catch(() => null);
+}
+
+function numericColumns(rows){
+  if(!rows || !rows.length) return [];
+  return Object.keys(rows[0]).filter(k => rows.every(r => r[k]===null || r[k]===undefined || typeof r[k]==='number'));
+}
+
+function findSymbolColumn(rows){
+  if(!rows || !rows.length) return null;
+  const keys = Object.keys(rows[0]);
+  return keys.find(k => k.includes('نماد') || k.toLowerCase().includes('symbol')) ||
+         keys.find(k => typeof rows[0][k] === 'string');
+}
+
+function renderTable(container, rows, limit=200){
+  if(!rows || !rows.length){ container.innerHTML = ''; return; }
+  const cols = Object.keys(rows[0]);
+  let html = '<table><thead><tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+  rows.slice(0, limit).forEach(r=>{
+    html += '<tr>' + cols.map(c=>{
+      const v = r[c];
+      const isNum = typeof v === 'number';
+      return `<td class="${isNum?'num':''}">${v===null||v===undefined?'':v}</td>`;
+    }).join('') + '</tr>';
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ---------- tabs ----------
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.panel').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ---------- signals tab ----------
+function drawSignalsChart(){
+  const metric = document.getElementById('metricSelect').value;
+  if(!metric || !state.signals) return;
+  let rows = state.signals;
+  if(state.symbolCol && state.selectedSymbols.size){
+    rows = rows.filter(r => state.selectedSymbols.has(String(r[state.symbolCol])));
+  }
+  const x = rows.map(r => r[state.symbolCol]);
+  const y = rows.map(r => r[metric]);
+  Plotly.newPlot('signalsChart', [{x, y, type:'bar', marker:{color:'#cf9f3f'}}], {
+    title: 'مقایسه‌ی «'+metric+'»',
+    paper_bgcolor:'#171b21', plot_bgcolor:'#171b21',
+    font:{color:'#e9e7e0', family:'Vazirmatn'},
+    margin:{t:40,r:10,l:40,b:60}
+  }, {displayModeBar:true, responsive:true});
+}
+
+function renderSignalsTable(){
+  let rows = state.signals;
+  if(state.symbolCol && state.selectedSymbols.size){
+    rows = rows.filter(r => state.selectedSymbols.has(String(r[state.symbolCol])));
+  }
+  renderTable(document.getElementById('signalsTable'), rows);
+}
+
+function initSignals(rows){
+  state.signals = rows;
+  state.symbolCol = findSymbolColumn(rows);
+  const nums = numericColumns(rows);
+  const metricSelect = document.getElementById('metricSelect');
+  metricSelect.innerHTML = nums.map(c=>`<option value="${c}">${c}</option>`).join('');
+  metricSelect.onchange = drawSignalsChart;
+
+  if(state.symbolCol){
+    const symbols = [...new Set(rows.map(r=>String(r[state.symbolCol])))].slice(0,30);
+    const chipRow = document.getElementById('symbolChips');
+    chipRow.innerHTML = symbols.map(s=>`<span class="chip" data-symbol="${s}">${s}</span>`).join('');
+    chipRow.querySelectorAll('.chip').forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        const s = chip.dataset.symbol;
+        if(state.selectedSymbols.has(s)){ state.selectedSymbols.delete(s); chip.classList.remove('active'); }
+        else { state.selectedSymbols.add(s); chip.classList.add('active'); }
+        renderSignalsTable();
+        drawSignalsChart();
+      });
+    });
+  }
+  renderSignalsTable();
+  drawSignalsChart();
+}
+
+// ---------- hot2 tab ----------
+function initHot2(rows){
+  state.hot2 = rows;
+  const nums = numericColumns(rows);
+  if(nums.length){
+    const metric = nums[0];
+    Plotly.newPlot('hot2Chart', [{
+      y: rows.map(r=>r[metric]), mode:'lines+markers', line:{color:'#cf9f3f'}
+    }], {
+      title:'روند '+metric,
+      paper_bgcolor:'#171b21', plot_bgcolor:'#171b21',
+      font:{color:'#e9e7e0', family:'Vazirmatn'},
+      margin:{t:40,r:10,l:40,b:40}
+    }, {responsive:true});
+  }
+  renderTable(document.getElementById('hot2Table'), rows);
+}
+
+// ---------- load everything ----------
+async function boot(){
+  let manifest = null;
+  try{
+    manifest = await fetch('web_export/last_update.json').then(r=>r.json());
+    document.getElementById('lastUpdate').textContent = '🕒 آخرین به‌روزرسانی: ' + manifest.last_update;
+  } catch(e){
+    document.getElementById('lastUpdate').textContent = 'هنوز همگام‌سازی نشده';
+  }
+
+  const signals = await fetchCSV('web_export/hot3/trading_signals_data_current.csv');
+  const topStocks = await fetchCSV('web_export/hot3/top_trading_signals_current.csv');
+  const hot2 = await fetchCSV('web_export/hot2/hot_money2_export.csv');
+
+  if(signals && signals.length){
+    document.getElementById('signalsContent').style.display = 'block';
+    initSignals(signals);
+  } else {
+    document.getElementById('signalsEmpty').style.display = 'block';
+  }
+  if(topStocks && topStocks.length){
+    renderTable(document.getElementById('topStocksTable'), topStocks);
+  }
+
+  if(hot2 && hot2.length){
+    document.getElementById('hot2Content').style.display = 'block';
+    initHot2(hot2);
+  } else {
+    document.getElementById('hot2Empty').style.display = 'block';
+  }
+
+  // gallery from manifest
+  const grid = document.getElementById('galleryGrid');
+  const pngs = (manifest && manifest.copied_files || []).filter(f => f.toLowerCase().endsWith('.png'));
+  if(pngs.length){
+    grid.innerHTML = pngs.map(p => `<figure><img src="web_export/${p}" loading="lazy"><figcaption>${p}</figcaption></figure>`).join('');
+  } else {
+    document.getElementById('galleryEmpty').style.display = 'block';
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
